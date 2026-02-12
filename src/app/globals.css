@@ -180,38 +180,36 @@ select option {
    縦長の楕円で雨粒の形を再現し、しとしと降る自然な雨に。
    opacity は SkyBackground 側で制御。 */
 
-/* 大粒の雨: ゆっくりめ、大きめの雨粒 */
+/* 手前の雨: 太め・縦に長い軌跡で雨らしさを表現 */
 .sky-rain-layer-1 {
   background:
-    radial-gradient(2.5px 7px at 8% 15%, rgba(170,200,255,0.5), transparent),
-    radial-gradient(3px 8px at 22% 40%, rgba(180,210,255,0.45), transparent),
-    radial-gradient(2px 6px at 35% 10%, rgba(160,195,250,0.5), transparent),
-    radial-gradient(3px 9px at 48% 55%, rgba(175,205,255,0.4), transparent),
-    radial-gradient(2.5px 7px at 62% 25%, rgba(170,200,255,0.45), transparent),
-    radial-gradient(2px 6px at 75% 65%, rgba(180,210,255,0.5), transparent),
-    radial-gradient(3px 8px at 88% 35%, rgba(165,198,250,0.4), transparent),
-    radial-gradient(2.5px 7px at 15% 75%, rgba(175,205,255,0.45), transparent),
-    radial-gradient(2px 6px at 42% 85%, rgba(170,200,255,0.5), transparent),
-    radial-gradient(3px 8px at 58% 70%, rgba(180,210,255,0.4), transparent),
-    radial-gradient(2.5px 7px at 95% 50%, rgba(165,198,250,0.45), transparent),
-    radial-gradient(2px 6px at 30% 95%, rgba(175,205,255,0.5), transparent);
+    radial-gradient(1.5px 18px at 8% 15%, rgba(170,205,255,0.45), transparent),
+    radial-gradient(1.5px 22px at 22% 45%, rgba(180,210,255,0.4), transparent),
+    radial-gradient(2px 20px at 35% 8%, rgba(165,200,250,0.45), transparent),
+    radial-gradient(1.5px 24px at 50% 55%, rgba(175,208,255,0.35), transparent),
+    radial-gradient(2px 19px at 63% 28%, rgba(170,205,255,0.4), transparent),
+    radial-gradient(1.5px 21px at 77% 65%, rgba(180,212,255,0.45), transparent),
+    radial-gradient(2px 20px at 90% 38%, rgba(168,202,250,0.35), transparent),
+    radial-gradient(1.5px 22px at 15% 78%, rgba(175,208,255,0.4), transparent),
+    radial-gradient(2px 18px at 42% 88%, rgba(170,205,255,0.45), transparent),
+    radial-gradient(1.5px 23px at 58% 72%, rgba(180,210,255,0.35), transparent);
   background-size: 200px 200px;
-  animation: rain-fall-large 3.5s linear infinite;
+  animation: rain-fall-large 1.8s linear infinite;
 }
 
-/* 2層目: 1層目より少しずらした大粒の雨（奥行き感） */
+/* 奥の雨: 少し細め・ゆっくり（奥行き感） */
 .sky-rain-layer-2 {
   background:
-    radial-gradient(2px 6px at 12% 30%, rgba(155,190,240,0.4), transparent),
-    radial-gradient(2.5px 7px at 28% 60%, rgba(160,195,240,0.35), transparent),
-    radial-gradient(2px 6.5px at 45% 15%, rgba(150,185,235,0.4), transparent),
-    radial-gradient(3px 8px at 60% 50%, rgba(155,190,240,0.3), transparent),
-    radial-gradient(2px 6px at 75% 80%, rgba(160,195,240,0.35), transparent),
-    radial-gradient(2.5px 7px at 90% 40%, rgba(150,185,235,0.4), transparent),
-    radial-gradient(2px 6.5px at 35% 90%, rgba(155,190,240,0.35), transparent),
-    radial-gradient(2.5px 7px at 82% 20%, rgba(160,195,240,0.3), transparent);
+    radial-gradient(1px 15px at 12% 25%, rgba(155,192,240,0.35), transparent),
+    radial-gradient(1px 17px at 30% 55%, rgba(160,195,240,0.3), transparent),
+    radial-gradient(1.5px 16px at 48% 12%, rgba(150,188,235,0.35), transparent),
+    radial-gradient(1px 18px at 65% 48%, rgba(158,193,240,0.25), transparent),
+    radial-gradient(1.5px 15px at 80% 75%, rgba(155,190,240,0.3), transparent),
+    radial-gradient(1px 17px at 93% 35%, rgba(150,188,235,0.35), transparent),
+    radial-gradient(1.5px 16px at 38% 90%, rgba(158,193,240,0.3), transparent),
+    radial-gradient(1px 18px at 72% 18%, rgba(155,192,240,0.25), transparent);
   background-size: 180px 180px;
-  animation: rain-fall-small 4s linear infinite;
+  animation: rain-fall-small 2.4s linear infinite;
 }
 
 /* 3層目は不要 → SkyBackground 側で layer-1, layer-2 のみ使用 */
