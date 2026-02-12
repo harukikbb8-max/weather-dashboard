@@ -194,7 +194,7 @@ select option {
     radial-gradient(2px 18px at 42% 88%, rgba(170,205,255,0.45), transparent),
     radial-gradient(1.5px 23px at 58% 72%, rgba(180,210,255,0.35), transparent);
   background-size: 200px 200px;
-  animation: rain-fall-large 1.8s linear infinite;
+  animation: rain-fall-large 0.6s linear infinite;
 }
 
 /* 奥の雨: 少し細め・ゆっくり（奥行き感） */
@@ -209,7 +209,7 @@ select option {
     radial-gradient(1.5px 16px at 38% 90%, rgba(158,193,240,0.3), transparent),
     radial-gradient(1px 18px at 72% 18%, rgba(155,192,240,0.25), transparent);
   background-size: 180px 180px;
-  animation: rain-fall-small 2.4s linear infinite;
+  animation: rain-fall-small 0.8s linear infinite;
 }
 
 /* 3層目は不要 → SkyBackground 側で layer-1, layer-2 のみ使用 */
