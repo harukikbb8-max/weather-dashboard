@@ -219,11 +219,11 @@ select option {
 
 @keyframes rain-fall-large {
   from { background-position: 0 0; }
-  to { background-position: 15px 200px; }
+  to { background-position: 0 200px; }
 }
 @keyframes rain-fall-small {
   from { background-position: 0 0; }
-  to { background-position: 10px 180px; }
+  to { background-position: 0 180px; }
 }
 
 /* --- 雪（2層構成） ---
