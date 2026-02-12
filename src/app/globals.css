@@ -175,58 +175,63 @@ select option {
   100% { opacity: inherit; }
 }
 
-/* --- 雨（3層構成） ---
-   手前・中間・奥の3レイヤーで奥行き感のある雨を表現。
-   各雨粒を個別の linear-gradient で配置し、ランダム感を演出。
-   repeating-linear-gradient の均等ストライプを避け、自然な降雨に見せる。
-   opacity は SkyBackground 側で制御し、コンテンツを遮らない。 */
+/* --- 雨（2層構成） ---
+   雪と同じ radial-gradient 方式で雨粒を表現。
+   縦長の楕円で雨粒の形を再現し、しとしと降る自然な雨に。
+   opacity は SkyBackground 側で制御。 */
 
-/* 手前の雨: 太め・速い・やや斜め */
+/* 大粒の雨: ゆっくりめ、大きめの雨粒 */
 .sky-rain-layer-1 {
   background:
-    linear-gradient(175deg, transparent 0%, transparent 45%, rgba(180,210,255,0.25) 45%, rgba(180,210,255,0.08) 55%, transparent 55%) 8% 0 / 60px 90px,
-    linear-gradient(172deg, transparent 0%, transparent 42%, rgba(190,215,255,0.22) 42%, rgba(190,215,255,0.06) 54%, transparent 54%) 25% 30px / 55px 85px,
-    linear-gradient(176deg, transparent 0%, transparent 44%, rgba(175,205,250,0.2) 44%, rgba(175,205,250,0.07) 53%, transparent 53%) 42% 10px / 65px 95px,
-    linear-gradient(173deg, transparent 0%, transparent 46%, rgba(185,212,255,0.23) 46%, rgba(185,212,255,0.06) 55%, transparent 55%) 60% 50px / 50px 80px,
-    linear-gradient(177deg, transparent 0%, transparent 43%, rgba(180,210,255,0.18) 43%, rgba(180,210,255,0.05) 54%, transparent 54%) 78% 20px / 58px 88px,
-    linear-gradient(174deg, transparent 0%, transparent 45%, rgba(190,218,255,0.21) 45%, rgba(190,218,255,0.07) 56%, transparent 56%) 93% 60px / 62px 92px;
-  animation: rain-fast 0.5s linear infinite;
+    radial-gradient(2.5px 7px at 8% 15%, rgba(170,200,255,0.5), transparent),
+    radial-gradient(3px 8px at 22% 40%, rgba(180,210,255,0.45), transparent),
+    radial-gradient(2px 6px at 35% 10%, rgba(160,195,250,0.5), transparent),
+    radial-gradient(3px 9px at 48% 55%, rgba(175,205,255,0.4), transparent),
+    radial-gradient(2.5px 7px at 62% 25%, rgba(170,200,255,0.45), transparent),
+    radial-gradient(2px 6px at 75% 65%, rgba(180,210,255,0.5), transparent),
+    radial-gradient(3px 8px at 88% 35%, rgba(165,198,250,0.4), transparent),
+    radial-gradient(2.5px 7px at 15% 75%, rgba(175,205,255,0.45), transparent),
+    radial-gradient(2px 6px at 42% 85%, rgba(170,200,255,0.5), transparent),
+    radial-gradient(3px 8px at 58% 70%, rgba(180,210,255,0.4), transparent),
+    radial-gradient(2.5px 7px at 95% 50%, rgba(165,198,250,0.45), transparent),
+    radial-gradient(2px 6px at 30% 95%, rgba(175,205,255,0.5), transparent);
+  background-size: 200px 200px;
+  animation: rain-fall-large 1.8s linear infinite;
 }
 
-/* 中間の雨: やや細め・中速 */
+/* 小粒の雨: 速め、細かい雨粒 */
 .sky-rain-layer-2 {
   background:
-    linear-gradient(176deg, transparent 0%, transparent 46%, rgba(160,195,240,0.18) 46%, rgba(160,195,240,0.05) 53%, transparent 53%) 5% 15px / 70px 100px,
-    linear-gradient(174deg, transparent 0%, transparent 44%, rgba(170,200,240,0.15) 44%, rgba(170,200,240,0.04) 52%, transparent 52%) 20% 45px / 65px 95px,
-    linear-gradient(178deg, transparent 0%, transparent 47%, rgba(155,190,235,0.16) 47%, rgba(155,190,235,0.05) 54%, transparent 54%) 38% 5px / 72px 105px,
-    linear-gradient(175deg, transparent 0%, transparent 45%, rgba(165,198,240,0.14) 45%, rgba(165,198,240,0.04) 53%, transparent 53%) 55% 35px / 60px 90px,
-    linear-gradient(177deg, transparent 0%, transparent 43%, rgba(160,195,240,0.17) 43%, rgba(160,195,240,0.05) 52%, transparent 52%) 72% 55px / 68px 98px,
-    linear-gradient(173deg, transparent 0%, transparent 46%, rgba(170,202,242,0.13) 46%, rgba(170,202,242,0.04) 54%, transparent 54%) 88% 25px / 75px 108px;
-  animation: rain-mid 0.7s linear infinite;
+    radial-gradient(1.5px 5px at 5% 20%, rgba(155,190,240,0.4), transparent),
+    radial-gradient(2px 5.5px at 18% 50%, rgba(160,195,240,0.35), transparent),
+    radial-gradient(1.5px 4.5px at 28% 5%, rgba(150,185,235,0.4), transparent),
+    radial-gradient(2px 6px at 40% 60%, rgba(155,190,240,0.3), transparent),
+    radial-gradient(1.5px 5px at 52% 30%, rgba(160,195,240,0.35), transparent),
+    radial-gradient(2px 5.5px at 65% 75%, rgba(150,185,235,0.4), transparent),
+    radial-gradient(1.5px 4.5px at 78% 15%, rgba(155,190,240,0.35), transparent),
+    radial-gradient(2px 5px at 90% 45%, rgba(160,195,240,0.3), transparent),
+    radial-gradient(1.5px 5px at 12% 85%, rgba(150,185,235,0.35), transparent),
+    radial-gradient(2px 5.5px at 55% 90%, rgba(155,190,240,0.4), transparent),
+    radial-gradient(1.5px 4.5px at 72% 55%, rgba(160,195,240,0.3), transparent),
+    radial-gradient(2px 5px at 85% 80%, rgba(150,185,235,0.35), transparent),
+    radial-gradient(1.5px 5px at 38% 35%, rgba(155,190,240,0.3), transparent),
+    radial-gradient(2px 5.5px at 48% 10%, rgba(160,195,240,0.35), transparent);
+  background-size: 160px 160px;
+  animation: rain-fall-small 1.2s linear infinite;
 }
 
-/* 奥の雨: 細く・遅い・ほぼ垂直 */
+/* 3層目は不要 → SkyBackground 側で layer-1, layer-2 のみ使用 */
 .sky-rain-layer-3 {
-  background:
-    linear-gradient(179deg, transparent 0%, transparent 47%, rgba(140,175,220,0.1) 47%, rgba(140,175,220,0.03) 52%, transparent 52%) 12% 10px / 80px 120px,
-    linear-gradient(178deg, transparent 0%, transparent 46%, rgba(145,178,222,0.09) 46%, rgba(145,178,222,0.02) 51%, transparent 51%) 30% 50px / 85px 115px,
-    linear-gradient(180deg, transparent 0%, transparent 48%, rgba(138,172,218,0.08) 48%, rgba(138,172,218,0.02) 52%, transparent 52%) 48% 30px / 78px 125px,
-    linear-gradient(179deg, transparent 0%, transparent 47%, rgba(142,176,220,0.1) 47%, rgba(142,176,220,0.03) 53%, transparent 53%) 65% 70px / 82px 118px,
-    linear-gradient(177deg, transparent 0%, transparent 46%, rgba(140,175,220,0.07) 46%, rgba(140,175,220,0.02) 51%, transparent 51%) 82% 40px / 90px 130px;
-  animation: rain-slow 0.9s linear infinite;
+  display: none;
 }
 
-@keyframes rain-fast {
-  from { background-position-y: 0; }
-  to { background-position-y: 90px; }
+@keyframes rain-fall-large {
+  from { background-position: 0 0; }
+  to { background-position: 15px 200px; }
 }
-@keyframes rain-mid {
-  from { background-position-y: 0; }
-  to { background-position-y: 100px; }
-}
-@keyframes rain-slow {
-  from { background-position-y: 0; }
-  to { background-position-y: 120px; }
+@keyframes rain-fall-small {
+  from { background-position: 0 0; }
+  to { background-position: -10px 160px; }
 }
 
 /* --- 雪（2層構成） ---
