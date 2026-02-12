@@ -4,6 +4,7 @@
 チャート上のデータポイントにホバーすると、背景の空が天気と昼夜に連動してリアルタイムに変化します。
 
 **デプロイ:** https://weather-dashboard-psi-liart.vercel.app/
+pw;admin
 
 ---
 
