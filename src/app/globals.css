@@ -1,0 +1,274 @@
+/**
+ * globals.css
+ * ───────────
+ * 責任: アプリケーション全体のテーマ・基盤スタイル定義
+ *
+ * 設計意図:
+ *  - Tailwind CSS v4 の @import による統合
+ *  - Liquid Glass デザインシステムのグローバルユーティリティクラス定義
+ *  - CSS カスタムプロパティでテーマ値を一元管理
+ *  - コンポーネント個別のスタイルは Tailwind ユーティリティクラスで記述し、
+ *    ここには「サイト全体で繰り返し使うパターン」のみ配置
+ */
+
+@import "tailwindcss";
+
+/* ============================================================
+   テーマ変数
+   ============================================================ */
+
+:root {
+  --glass-bg: rgba(255, 255, 255, 0.07);
+  --glass-border: rgba(255, 255, 255, 0.14);
+  --glass-blur: 14px;
+}
+
+/* ============================================================
+   ベーススタイル
+   ============================================================ */
+
+body {
+  /* 背景は SkyBackground コンポーネントが動的に描画するため、
+     ここでは透明（デフォルト色はフォールバック用） */
+  background: #0a0e1a;
+  color: #e2e8f0;
+  min-height: 100vh;
+  overflow-y: scroll;
+}
+
+/* ============================================================
+   Liquid Glass ユーティリティ
+   ============================================================
+
+   .glass-card:
+   macOS Liquid Glass のガラスモーフィズムを再現するクラス。
+   backdrop-filter で背景をぼかし、半透明の背景色と微細なボーダーで
+   「すりガラス」の質感を表現する。
+
+   使用箇所: Header, 各セレクタ, チャートカード, 現在天気カード等
+   → アプリ全体でビジュアルの一貫性を保証する
+*/
+.glass-card {
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  border-radius: 1rem;
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  /* 上辺に微細なハイライトを追加し、光源を示唆 */
+  box-shadow:
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.06),
+    0 4px 24px -1px rgba(0, 0, 0, 0.2);
+  transition: box-shadow 0.3s ease, border-color 0.3s ease;
+}
+
+.glass-card:hover {
+  border-color: rgba(255, 255, 255, 0.2);
+  box-shadow:
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.1),
+    0 8px 32px -4px rgba(0, 0, 0, 0.3);
+}
+
+/* ============================================================
+   Recharts カスタムスタイル
+   ============================================================
+
+   Recharts はインラインスタイルを多用するため、
+   一部のスタイル上書きにはグローバルCSSが必要
+*/
+
+/* ツールチップの背景を Liquid Glass に */
+.recharts-tooltip-wrapper {
+  filter: drop-shadow(0 8px 16px rgba(0, 0, 0, 0.3));
+}
+
+/* レジェンドのテキスト色 */
+.recharts-legend-item-text {
+  color: rgba(255, 255, 255, 0.6) !important;
+}
+
+/* ============================================================
+   スクロールバーカスタマイズ
+   ============================================================ */
+
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+/* ============================================================
+   セレクトボックスのoption要素
+   ============================================================
+   <option> はOSネイティブ描画のため、ダーク背景を明示
+*/
+
+select option {
+  background: #1a1f2e;
+  color: #e2e8f0;
+}
+
+/* ============================================================
+   アニメーション
+   ============================================================ */
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.4s ease-out;
+}
+
+/* ============================================================
+   空背景エフェクト
+   ============================================================
+
+   SkyBackground コンポーネントが使用するCSS-onlyアニメーション。
+   Canvas/JSアニメーション不使用 → メインスレッドをブロックしない。
+   GPU合成レイヤーで描画されるため60fps維持可能。
+*/
+
+/* --- 星（夜間・晴天用） ---
+   radial-gradient で微細なドットを散布し、twinkle で明滅させる。
+   3つのレイヤーを重ねてランダム感を演出。 */
+.sky-stars {
+  background:
+    radial-gradient(1px 1px at 10% 15%, rgba(255,255,255,0.8), transparent),
+    radial-gradient(1px 1px at 25% 35%, rgba(255,255,255,0.6), transparent),
+    radial-gradient(1px 1px at 40% 10%, rgba(255,255,255,0.7), transparent),
+    radial-gradient(1px 1px at 55% 45%, rgba(255,255,255,0.5), transparent),
+    radial-gradient(1px 1px at 70% 20%, rgba(255,255,255,0.8), transparent),
+    radial-gradient(1px 1px at 85% 40%, rgba(255,255,255,0.6), transparent),
+    radial-gradient(1px 1px at 15% 55%, rgba(255,255,255,0.4), transparent),
+    radial-gradient(1px 1px at 35% 70%, rgba(255,255,255,0.7), transparent),
+    radial-gradient(1px 1px at 60% 65%, rgba(255,255,255,0.5), transparent),
+    radial-gradient(1px 1px at 80% 75%, rgba(255,255,255,0.6), transparent),
+    radial-gradient(1px 1px at 90% 60%, rgba(255,255,255,0.4), transparent),
+    radial-gradient(1px 1px at 50% 80%, rgba(255,255,255,0.7), transparent),
+    radial-gradient(1.5px 1.5px at 20% 85%, rgba(200,220,255,0.9), transparent),
+    radial-gradient(1.5px 1.5px at 75% 90%, rgba(200,220,255,0.8), transparent);
+  background-size: 200px 200px;
+  animation: twinkle 4s ease-in-out infinite alternate;
+}
+
+@keyframes twinkle {
+  0% { opacity: inherit; }
+  50% { opacity: calc(0.6 * var(--tw-opacity, 1)); }
+  100% { opacity: inherit; }
+}
+
+/* --- 雨（3層構成） ---
+   手前・中間・奥の3レイヤーで奥行き感のある雨を表現。
+   各層は速度・角度・太さが異なり、自然な降雨に見せる。
+   opacity は SkyBackground 側で制御し、コンテンツを遮らない。 */
+
+/* 手前の雨: 太め・速い・やや斜め */
+.sky-rain-layer-1 {
+  background: repeating-linear-gradient(
+    97deg,
+    transparent,
+    transparent 3px,
+    rgba(180, 210, 255, 0.15) 3px,
+    rgba(180, 210, 255, 0.15) 4px
+  );
+  background-size: 100% 80px;
+  animation: rain-fast 0.4s linear infinite;
+}
+
+/* 中間の雨: 中くらい */
+.sky-rain-layer-2 {
+  background: repeating-linear-gradient(
+    100deg,
+    transparent,
+    transparent 5px,
+    rgba(160, 190, 230, 0.12) 5px,
+    rgba(160, 190, 230, 0.12) 6px
+  );
+  background-size: 100% 60px;
+  animation: rain-mid 0.55s linear infinite;
+}
+
+/* 奥の雨: 細め・遅い・ほぼ垂直 */
+.sky-rain-layer-3 {
+  background: repeating-linear-gradient(
+    93deg,
+    transparent,
+    transparent 7px,
+    rgba(140, 170, 210, 0.08) 7px,
+    rgba(140, 170, 210, 0.08) 8px
+  );
+  background-size: 100% 50px;
+  animation: rain-slow 0.7s linear infinite;
+}
+
+@keyframes rain-fast {
+  from { background-position: 0 0; }
+  to { background-position: -6px 80px; }
+}
+@keyframes rain-mid {
+  from { background-position: 0 0; }
+  to { background-position: -10px 60px; }
+}
+@keyframes rain-slow {
+  from { background-position: 0 0; }
+  to { background-position: -3px 50px; }
+}
+
+/* --- 雪（2層構成） ---
+   大粒と小粒を別レイヤーにし、落下速度と揺れ幅を変えて
+   自然な降雪を表現。 */
+
+/* 大粒: ゆっくり、大きく揺れる */
+.sky-snow-layer-1 {
+  background:
+    radial-gradient(3px 3px at 10% 20%, rgba(255,255,255,0.6), transparent),
+    radial-gradient(3.5px 3.5px at 30% 50%, rgba(255,255,255,0.5), transparent),
+    radial-gradient(3px 3px at 55% 15%, rgba(255,255,255,0.55), transparent),
+    radial-gradient(4px 4px at 75% 65%, rgba(255,255,255,0.4), transparent),
+    radial-gradient(3px 3px at 90% 35%, rgba(255,255,255,0.5), transparent),
+    radial-gradient(3.5px 3.5px at 45% 80%, rgba(255,255,255,0.45), transparent);
+  background-size: 180px 180px;
+  animation: snow-large 5s linear infinite;
+}
+
+/* 小粒: 速め、細かく揺れる */
+.sky-snow-layer-2 {
+  background:
+    radial-gradient(1.5px 1.5px at 15% 25%, rgba(255,255,255,0.5), transparent),
+    radial-gradient(2px 2px at 35% 55%, rgba(255,255,255,0.4), transparent),
+    radial-gradient(1.5px 1.5px at 60% 10%, rgba(255,255,255,0.45), transparent),
+    radial-gradient(2px 2px at 80% 70%, rgba(255,255,255,0.35), transparent),
+    radial-gradient(1.5px 1.5px at 25% 85%, rgba(255,255,255,0.4), transparent),
+    radial-gradient(2px 2px at 70% 40%, rgba(255,255,255,0.5), transparent),
+    radial-gradient(1.5px 1.5px at 50% 60%, rgba(255,255,255,0.35), transparent),
+    radial-gradient(2px 2px at 95% 15%, rgba(255,255,255,0.4), transparent);
+  background-size: 140px 140px;
+  animation: snow-small 3.5s linear infinite;
+}
+
+@keyframes snow-large {
+  from { background-position: 0 0; }
+  to { background-position: 40px 180px; }
+}
+@keyframes snow-small {
+  from { background-position: 0 0; }
+  to { background-position: -20px 140px; }
+}
