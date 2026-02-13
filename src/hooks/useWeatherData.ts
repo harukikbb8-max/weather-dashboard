@@ -56,6 +56,7 @@ function transformToChartData(
 ): ChartDataPoint[] {
   const times = response.hourly.time as string[];
   const weatherCodes = response.hourly.weather_code as number[] | undefined;
+  const precipitations = response.hourly.precipitation as number[] | undefined;
 
   return times.map((time, index) => {
     const date = new Date(time);
@@ -64,6 +65,7 @@ function transformToChartData(
       timestamp: date.getTime(),
       hour: date.getHours(),
       weather_code: weatherCodes?.[index] ?? 0,
+      precipitation: precipitations?.[index] ?? 0,
     };
 
     for (const metricId of metrics) {
