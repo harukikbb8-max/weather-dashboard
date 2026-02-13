@@ -177,16 +177,6 @@ function getRainSpeed(precipitation: number | undefined): { layer1: string; laye
   return { layer1: "0.5s", layer2: "0.7s" };
 }
 
-/** 天気条件による太陽の減衰率 */
-const SUN_DAMPING: Record<SkyCondition, number> = {
-  clear: 1.0,
-  cloudy: 0.6,
-  overcast: 0.15,
-  rain: 0.08,
-  snow: 0.12,
-  thunder: 0.05,
-  fog: 0.08,
-};
 
 // ============================================================
 // コンポーネント
@@ -232,45 +222,17 @@ export function SkyBackground({ weatherCode, hoveredPoint, precipitation, latitu
     [effectivePrecipitation]
   );
 
-  // 太陽の見た目
-  const sunVisuals = useMemo(() => {
-    const alt = solar.altitude;
-    const damping = SUN_DAMPING[condition] ?? 1;
-
-    // 全体の透明度（地平線下-4°から出現）
-    let baseOpacity: number;
-    if (alt > 8) baseOpacity = 0.85;
-    else if (alt > 0) baseOpacity = 0.4 + (alt / 8) * 0.45;
-    else if (alt > -4) baseOpacity = ((alt + 4) / 4) * 0.4;
-    else baseOpacity = 0;
-
-    const opacity = baseOpacity * damping;
-
-    // 色温度（地平線付近は暖色、高い位置は白寄り）
-    const warmth = alt < 10 ? 1 : alt < 25 ? 1 - (alt - 10) / 15 : 0;
-    // 暖色: 255,160,60 → 白寄り: 255,240,200
-    const coreR = 255;
-    const coreG = Math.round(160 + (240 - 160) * (1 - warmth));
-    const coreB = Math.round(60 + (200 - 60) * (1 - warmth));
-
-    // グロー強度（ゴールデンアワー時に最大）
-    const glowIntensity = alt > 0 && alt < 15 ? 0.25 : alt >= 15 ? 0.12 : alt > -4 ? 0.15 : 0;
-
-    return { opacity, coreR, coreG, coreB, glowIntensity: glowIntensity * damping, warmth };
-  }, [solar.altitude, condition]);
-
   // 大気散乱（太陽位置に追従）
   const scatterGradient = useMemo(() => {
     if (solar.skyPhase < 0.1) {
-      // 深夜: 微かな青い光
       return "radial-gradient(ellipse at 30% 30%, rgba(100,120,255,0.06) 0%, transparent 60%)";
     }
-    // 太陽位置に追従する暖色の散乱
+    const warmth = solar.altitude < 10 ? 1 : solar.altitude < 25 ? 1 - (solar.altitude - 10) / 15 : 0;
     const warmAlpha = solar.skyPhase < 0.5
-      ? 0.06 + sunVisuals.warmth * 0.12  // 朝焼け/夕焼け時は強い
-      : 0.08;                              // 日中は控えめ
+      ? 0.06 + warmth * 0.12
+      : 0.08;
     return `radial-gradient(ellipse at ${solar.sunX}% ${100 - solar.sunY}%, rgba(255,200,100,${warmAlpha}) 0%, transparent 55%)`;
-  }, [solar.skyPhase, solar.sunX, solar.sunY, sunVisuals.warmth]);
+  }, [solar.skyPhase, solar.sunX, solar.sunY, solar.altitude]);
 
   const transitionDuration = hoveredPoint ? "300ms" : "2000ms";
 
@@ -294,31 +256,7 @@ export function SkyBackground({ weatherCode, hoveredPoint, precipitation, latitu
         }}
       />
 
-      {/* 太陽 */}
-      <div
-        className="absolute pointer-events-none"
-        style={{
-          width: "70px",
-          height: "70px",
-          borderRadius: "50%",
-          left: `${solar.sunX}%`,
-          bottom: `${solar.sunY}%`,
-          transform: "translate(-50%, 50%)",
-          background: `radial-gradient(circle,
-            rgba(${sunVisuals.coreR}, ${sunVisuals.coreG}, ${sunVisuals.coreB}, ${sunVisuals.opacity}) 0%,
-            rgba(${sunVisuals.coreR}, ${sunVisuals.coreG}, ${Math.max(0, sunVisuals.coreB - 40)}, ${sunVisuals.opacity * 0.5}) 35%,
-            rgba(255, 180, 80, ${sunVisuals.opacity * 0.2}) 65%,
-            transparent 100%)`,
-          boxShadow: sunVisuals.glowIntensity > 0
-            ? `0 0 40px 15px rgba(255, 200, 100, ${sunVisuals.glowIntensity}),
-               0 0 80px 30px rgba(255, 180, 80, ${sunVisuals.glowIntensity * 0.4})`
-            : "none",
-          transition: `left ${transitionDuration} ease-in-out,
-                       bottom ${transitionDuration} ease-in-out,
-                       background ${transitionDuration} ease-in-out,
-                       box-shadow ${transitionDuration} ease-in-out`,
-        }}
-      />
+      {/* 太陽（削除済み） */}
 
       {/* 星（スカイフェーズで滑らかにフェードアウト） */}
       <div
