@@ -90,9 +90,11 @@ function getSkyGradient(condition: SkyCondition, daytime: boolean): string {
  * 天気に応じたエフェクトの強度
  * 可読性を保つため opacity は抑えめ。主張しすぎない演出を意識
  */
-function getOverlayConfig(condition: SkyCondition, daytime: boolean) {
+function getOverlayConfig(condition: SkyCondition, daytime: boolean, precipitation: number) {
+  // 降水量が0なら雨エフェクトを表示しない
+  const hasRain = precipitation > 0;
   return {
-    rainOpacity: condition === "rain" ? 0.35 : condition === "thunder" ? 0.45 : 0,
+    rainOpacity: hasRain ? (condition === "rain" ? 0.35 : condition === "thunder" ? 0.45 : 0) : 0,
     snowOpacity: condition === "snow" ? 0.4 : 0,
     fogOpacity: condition === "fog" ? 0.35 : 0,
     starsOpacity: !daytime && (condition === "clear" || condition === "cloudy") ? 0.6 : 0,
@@ -129,12 +131,12 @@ export function SkyBackground({ weatherCode, hoveredPoint, precipitation }: SkyB
     () => getSkyGradient(condition, daytime),
     [condition, daytime]
   );
-  const overlay = useMemo(
-    () => getOverlayConfig(condition, daytime),
-    [condition, daytime]
-  );
   // ホバー中はホバー先の降水量、それ以外は現在の降水量で速度を決定
   const effectivePrecipitation = hoveredPoint?.precipitation ?? precipitation;
+  const overlay = useMemo(
+    () => getOverlayConfig(condition, daytime, effectivePrecipitation ?? 0),
+    [condition, daytime, effectivePrecipitation]
+  );
   const rainSpeed = useMemo(
     () => getRainSpeed(effectivePrecipitation),
     [effectivePrecipitation]
