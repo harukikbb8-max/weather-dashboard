@@ -52,51 +52,74 @@ interface PaletteEntry {
 }
 
 /**
- * clear（快晴）のベースパレット
- * 他の天気条件はここから派生させる
+ * 天気条件ごとの専用パレット
+ * 自動派生ではなく手書きで色差を明確にする
  */
-const CLEAR_PALETTES: PaletteEntry[] = [
-  { phase: 0.00, colors: ["#0a0e27", "#1a1040", "#0d1b3e", "#0a1628"] },           // 深夜
-  { phase: 0.15, colors: ["#0d1535", "#1a1845", "#1e2555", "#1a2040"] },           // 天文薄明
-  { phase: 0.25, colors: ["#1a1a45", "#2d2555", "#4a3060", "#6a3555"] },           // 航海薄明
-  { phase: 0.33, colors: ["#2a2050", "#4a3065", "#8a4560", "#d46a50"] },           // 市民薄明（朝焼け/夕焼け）
-  { phase: 0.42, colors: ["#3a4080", "#5a70b0", "#c08850", "#e8a040"] },           // ゴールデンアワー
-  { phase: 0.55, colors: ["#2060c0", "#4088e0", "#70a8f0", "#a0c8ff"] },           // 朝・午後
-  { phase: 1.00, colors: ["#1a6dd4", "#3a8ee8", "#6ab4f7", "#d4edff"] },           // 真昼
-];
-
-/**
- * 天気条件別のパレット変換ルール
- * clear のパレットを基準に、彩度・明度をシフトして派生
- */
-function deriveConditionPalettes(condition: SkyCondition): PaletteEntry[] {
-  if (condition === "clear") return CLEAR_PALETTES;
-
-  // 各条件の変換パラメータ: [saturationMult, brightnessMult, blueShift]
-  const transforms: Record<string, [number, number, number]> = {
-    cloudy:   [0.65, 0.90, 8],
-    overcast: [0.35, 0.75, 5],
-    rain:     [0.40, 0.60, 10],
-    snow:     [0.30, 0.85, 15],
-    thunder:  [0.30, 0.50, 5],
-    fog:      [0.25, 0.80, 10],
-  };
-
-  const [satMul, briMul, blueShift] = transforms[condition] ?? [1, 1, 0];
-
-  return CLEAR_PALETTES.map(entry => ({
-    phase: entry.phase,
-    colors: entry.colors.map(hex => {
-      const [r, g, b] = parseHex(hex);
-      // 彩度を下げる（グレーに寄せる）
-      const avg = (r + g + b) / 3;
-      const nr = Math.round((r + (avg - r) * (1 - satMul)) * briMul);
-      const ng = Math.round((g + (avg - g) * (1 - satMul)) * briMul);
-      const nb = Math.round(Math.min(255, (b + (avg - b) * (1 - satMul)) * briMul + blueShift));
-      return toHex(nr, ng, nb);
-    }) as Palette,
-  }));
-}
+const CONDITION_PALETTES: Record<SkyCondition, PaletteEntry[]> = {
+  clear: [
+    { phase: 0.00, colors: ["#0a0e27", "#1a1040", "#0d1b3e", "#0a1628"] },
+    { phase: 0.15, colors: ["#0d1535", "#1a1845", "#1e2555", "#1a2040"] },
+    { phase: 0.25, colors: ["#1a1a45", "#2d2555", "#4a3060", "#6a3555"] },
+    { phase: 0.33, colors: ["#2a2050", "#4a3065", "#8a4560", "#d46a50"] },
+    { phase: 0.42, colors: ["#3a4080", "#5a70b0", "#c08850", "#e8a040"] },
+    { phase: 0.55, colors: ["#2060c0", "#4088e0", "#70a8f0", "#a0c8ff"] },
+    { phase: 1.00, colors: ["#1a6dd4", "#3a8ee8", "#6ab4f7", "#d4edff"] },
+  ],
+  cloudy: [
+    { phase: 0.00, colors: ["#141828", "#1e2440", "#1a2035", "#161c2e"] },
+    { phase: 0.15, colors: ["#181e38", "#222a48", "#283050", "#222840"] },
+    { phase: 0.25, colors: ["#252838", "#353a4a", "#484855", "#5a4a48"] },
+    { phase: 0.33, colors: ["#303040", "#484855", "#706058", "#a07050"] },
+    { phase: 0.42, colors: ["#405068", "#607090", "#988870", "#b89060"] },
+    { phase: 0.55, colors: ["#4a7ab5", "#6a95c8", "#8cb0d8", "#b8cfe5"] },
+    { phase: 1.00, colors: ["#4a7ab5", "#6a95c8", "#8cb0d8", "#b8cfe5"] },
+  ],
+  overcast: [
+    { phase: 0.00, colors: ["#181c28", "#222630", "#1e2230", "#1a1e28"] },
+    { phase: 0.15, colors: ["#1e2230", "#282c38", "#2a2e38", "#252830"] },
+    { phase: 0.25, colors: ["#282c38", "#353840", "#404548", "#484c50"] },
+    { phase: 0.33, colors: ["#353840", "#484c55", "#585c62", "#686c70"] },
+    { phase: 0.42, colors: ["#454a55", "#585e68", "#6a7078", "#7a8088"] },
+    { phase: 0.55, colors: ["#5a6578", "#727e90", "#8a95a5", "#a0aab5"] },
+    { phase: 1.00, colors: ["#5a6578", "#727e90", "#8a95a5", "#a0aab5"] },
+  ],
+  rain: [
+    { phase: 0.00, colors: ["#0e1218", "#161c28", "#111820", "#0e1418"] },
+    { phase: 0.15, colors: ["#121820", "#1a2230", "#182028", "#141c22"] },
+    { phase: 0.25, colors: ["#1a2028", "#252c38", "#283038", "#2a3038"] },
+    { phase: 0.33, colors: ["#222830", "#303840", "#384045", "#404848"] },
+    { phase: 0.42, colors: ["#2a3540", "#3a4550", "#485058", "#505860"] },
+    { phase: 0.55, colors: ["#3a4555", "#4d5868", "#5a6575", "#6e7888"] },
+    { phase: 1.00, colors: ["#3a4555", "#4d5868", "#5a6575", "#6e7888"] },
+  ],
+  snow: [
+    { phase: 0.00, colors: ["#1a1e2e", "#252838", "#1e2130", "#1a1e28"] },
+    { phase: 0.15, colors: ["#202430", "#2a2e3a", "#282c38", "#242830"] },
+    { phase: 0.25, colors: ["#303440", "#3a3e48", "#454850", "#505458"] },
+    { phase: 0.33, colors: ["#404450", "#505560", "#606468", "#707478"] },
+    { phase: 0.42, colors: ["#556070", "#687080", "#788088", "#8a9098"] },
+    { phase: 0.55, colors: ["#7888a0", "#8fa0b8", "#a5b5c8", "#c0cdd8"] },
+    { phase: 1.00, colors: ["#7888a0", "#8fa0b8", "#a5b5c8", "#c0cdd8"] },
+  ],
+  thunder: [
+    { phase: 0.00, colors: ["#0a0c15", "#151825", "#0e1018", "#0a0c12"] },
+    { phase: 0.15, colors: ["#0e1018", "#181c28", "#141820", "#101418"] },
+    { phase: 0.25, colors: ["#151820", "#202530", "#1e2228", "#1a1e25"] },
+    { phase: 0.33, colors: ["#1a2028", "#282e38", "#283035", "#2a3038"] },
+    { phase: 0.42, colors: ["#222a35", "#303a48", "#384050", "#404855"] },
+    { phase: 0.55, colors: ["#2a3040", "#3d4555", "#4a5265", "#555e70"] },
+    { phase: 1.00, colors: ["#2a3040", "#3d4555", "#4a5265", "#555e70"] },
+  ],
+  fog: [
+    { phase: 0.00, colors: ["#1a1e28", "#222630", "#1e2228", "#1a1e25"] },
+    { phase: 0.15, colors: ["#202428", "#282c32", "#262a30", "#222628"] },
+    { phase: 0.25, colors: ["#303438", "#3a3e42", "#404448", "#484c50"] },
+    { phase: 0.33, colors: ["#404448", "#505458", "#585c60", "#606468"] },
+    { phase: 0.42, colors: ["#505558", "#606468", "#6a7075", "#787e82"] },
+    { phase: 0.55, colors: ["#6a7585", "#808a98", "#95a0ab", "#b0b8c2"] },
+    { phase: 1.00, colors: ["#6a7585", "#808a98", "#95a0ab", "#b0b8c2"] },
+  ],
+};
 
 // ============================================================
 // 色補間ユーティリティ
@@ -127,7 +150,7 @@ function lerpColor(a: string, b: string, t: number): string {
 
 /** スカイフェーズに基づいてグラデーションを補間生成 */
 function getSkyGradientByPhase(condition: SkyCondition, skyPhase: number): string {
-  const palettes = deriveConditionPalettes(condition);
+  const palettes = CONDITION_PALETTES[condition];
   const clamped = Math.max(0, Math.min(1, skyPhase));
 
   // 補間区間を特定
