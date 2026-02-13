@@ -177,7 +177,7 @@ export function SkyBackground({ weatherCode, hoveredPoint, precipitation }: SkyB
         className="absolute inset-0 sky-rain-layer-1"
         style={{
           opacity: overlay.rainOpacity,
-          animationDuration: rainSpeed.layer1,
+          animation: `rain-fall-large ${rainSpeed.layer1} linear infinite`,
           transition: `opacity ${transitionDuration}`,
         }}
       />
@@ -185,7 +185,7 @@ export function SkyBackground({ weatherCode, hoveredPoint, precipitation }: SkyB
         className="absolute inset-0 sky-rain-layer-2"
         style={{
           opacity: overlay.rainOpacity * 0.6,
-          animationDuration: rainSpeed.layer2,
+          animation: `rain-fall-small ${rainSpeed.layer2} linear infinite`,
           transition: `opacity ${transitionDuration}`,
         }}
       />
