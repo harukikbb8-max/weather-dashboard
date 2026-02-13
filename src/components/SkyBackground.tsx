@@ -4,112 +4,172 @@
  * 責任: 現在の天気に連動して変化する動的な空の背景を描画する
  *
  * 設計意図:
- *  - 天気コード + 時間帯（昼/夜）から空のグラデーションを動的に決定
- *  - チャートホバー時に hour を受け取り、ホバー中のデータ時刻で
- *    昼夜が変化する（6:00-18:00を昼、それ以外を夜）
- *  - CSS グラデーション + トランジションで滑らかに切り替え
- *    （Canvas不要 → バンドルサイズ増加なし）
- *  - 雨・雪エフェクトは CSS-only で実装。
- *    opacity を控えめにしてコンテンツの可読性を確保
+ *  - 太陽高度角（緯度・日付・時刻から天文計算）に基づく連続的なグラデーション遷移
+ *    → 朝焼け、ゴールデンアワー、真昼、夕焼け、薄明、深夜を滑らかに表現
+ *  - 太陽エレメントが時刻に応じて弧を描いて移動
+ *  - 天気条件（7種）ごとにカラーパレットを定義し、フェーズ間を線形補間
  *  - 雨の速度は降水量に応じて3段階に変化（0〜2mm / 2〜5mm / 5mm超）
- *    animation プロパティをインラインで丸ごと指定し CSS shorthand との競合を回避
+ *  - チャートホバー時に hour を受け取り、300ms でスムーズに遷移
  *
  * パフォーマンス:
  *  - CSSのみで描画。GPUアクセラレーション対象
- *  - ホバーで頻繁に更新されるが、変更は CSS 変数の切替のみ
+ *  - useMemo で計算結果をキャッシュ
  */
 
 "use client";
 
 import { useMemo } from "react";
 import { weatherCodeToSkyCondition, type SkyCondition, type HoveredPointInfo } from "@/types";
+import {
+  calcSolarAltitude,
+  getDayOfYear,
+  altitudeToSkyPhase,
+  calcSunHorizontalPosition,
+  calcSunVerticalPosition,
+} from "@/lib/solar";
 
 interface SkyBackgroundProps {
   weatherCode: number | undefined;
-  /** チャートホバー中のデータポイント情報。null ならデフォルト（現在時刻） */
   hoveredPoint: HoveredPointInfo | null;
-  /** 現在の降水量（mm）。雨アニメーションの速度制御に使用 */
   precipitation?: number;
+  /** 都市の緯度。太陽位置計算に使用 */
+  latitude: number;
+}
+
+// ============================================================
+// カラーパレット定義
+// ============================================================
+
+/** 4色のグラデーション停止点（上→下） */
+type Palette = [string, string, string, string];
+
+/** フェーズ（0.0〜1.0）ごとのパレット定義 */
+interface PaletteEntry {
+  phase: number;
+  colors: Palette;
 }
 
 /**
- * 時刻が昼間かどうかを判定
- * hour が渡されればそれを使い、なければ現在時刻
+ * clear（快晴）のベースパレット
+ * 他の天気条件はここから派生させる
  */
-function isDaytime(hour?: number): boolean {
-  const h = hour ?? new Date().getHours();
-  return h >= 6 && h < 18;
-}
+const CLEAR_PALETTES: PaletteEntry[] = [
+  { phase: 0.00, colors: ["#0a0e27", "#1a1040", "#0d1b3e", "#0a1628"] },           // 深夜
+  { phase: 0.15, colors: ["#0d1535", "#1a1845", "#1e2555", "#1a2040"] },           // 天文薄明
+  { phase: 0.25, colors: ["#1a1a45", "#2d2555", "#4a3060", "#6a3555"] },           // 航海薄明
+  { phase: 0.33, colors: ["#2a2050", "#4a3065", "#8a4560", "#d46a50"] },           // 市民薄明（朝焼け/夕焼け）
+  { phase: 0.42, colors: ["#3a4080", "#5a70b0", "#c08850", "#e8a040"] },           // ゴールデンアワー
+  { phase: 0.55, colors: ["#2060c0", "#4088e0", "#70a8f0", "#a0c8ff"] },           // 朝・午後
+  { phase: 1.00, colors: ["#1a6dd4", "#3a8ee8", "#6ab4f7", "#d4edff"] },           // 真昼
+];
 
 /**
- * 天気 × 時間帯 → CSSグラデーション のマッピング
+ * 天気条件別のパレット変換ルール
+ * clear のパレットを基準に、彩度・明度をシフトして派生
  */
-function getSkyGradient(condition: SkyCondition, daytime: boolean): string {
-  if (!daytime) {
-    switch (condition) {
-      case "clear":
-        return "linear-gradient(180deg, #0a0e27 0%, #1a1040 30%, #0d1b3e 70%, #0a1628 100%)";
-      case "cloudy":
-        return "linear-gradient(180deg, #141828 0%, #1e2440 40%, #1a2035 100%)";
-      case "overcast":
-        return "linear-gradient(180deg, #181c28 0%, #252a38 50%, #1e2230 100%)";
-      case "rain":
-        return "linear-gradient(180deg, #0e1218 0%, #161c28 40%, #111820 100%)";
-      case "snow":
-        return "linear-gradient(180deg, #1a1e2e 0%, #252838 50%, #1e2130 100%)";
-      case "thunder":
-        return "linear-gradient(180deg, #0a0c15 0%, #151825 40%, #0e1018 100%)";
-      case "fog":
-        return "linear-gradient(180deg, #1a1e28 0%, #222630 50%, #1e2228 100%)";
-      default:
-        return "linear-gradient(180deg, #0a0e27 0%, #1a1040 30%, #0a1628 100%)";
+function deriveConditionPalettes(condition: SkyCondition): PaletteEntry[] {
+  if (condition === "clear") return CLEAR_PALETTES;
+
+  // 各条件の変換パラメータ: [saturationMult, brightnessMult, blueShift]
+  const transforms: Record<string, [number, number, number]> = {
+    cloudy:   [0.65, 0.90, 8],
+    overcast: [0.35, 0.75, 5],
+    rain:     [0.40, 0.60, 10],
+    snow:     [0.30, 0.85, 15],
+    thunder:  [0.30, 0.50, 5],
+    fog:      [0.25, 0.80, 10],
+  };
+
+  const [satMul, briMul, blueShift] = transforms[condition] ?? [1, 1, 0];
+
+  return CLEAR_PALETTES.map(entry => ({
+    phase: entry.phase,
+    colors: entry.colors.map(hex => {
+      const [r, g, b] = parseHex(hex);
+      // 彩度を下げる（グレーに寄せる）
+      const avg = (r + g + b) / 3;
+      const nr = Math.round((r + (avg - r) * (1 - satMul)) * briMul);
+      const ng = Math.round((g + (avg - g) * (1 - satMul)) * briMul);
+      const nb = Math.round(Math.min(255, (b + (avg - b) * (1 - satMul)) * briMul + blueShift));
+      return toHex(nr, ng, nb);
+    }) as Palette,
+  }));
+}
+
+// ============================================================
+// 色補間ユーティリティ
+// ============================================================
+
+function parseHex(hex: string): [number, number, number] {
+  const h = hex.replace("#", "");
+  return [parseInt(h.slice(0, 2), 16), parseInt(h.slice(2, 4), 16), parseInt(h.slice(4, 6), 16)];
+}
+
+function toHex(r: number, g: number, b: number): string {
+  const clamp = (v: number) => Math.max(0, Math.min(255, v));
+  return `#${clamp(r).toString(16).padStart(2, "0")}${clamp(g).toString(16).padStart(2, "0")}${clamp(b).toString(16).padStart(2, "0")}`;
+}
+
+function lerpColor(a: string, b: string, t: number): string {
+  const ca = parseHex(a), cb = parseHex(b);
+  return toHex(
+    Math.round(ca[0] + (cb[0] - ca[0]) * t),
+    Math.round(ca[1] + (cb[1] - ca[1]) * t),
+    Math.round(ca[2] + (cb[2] - ca[2]) * t),
+  );
+}
+
+// ============================================================
+// グラデーション生成
+// ============================================================
+
+/** スカイフェーズに基づいてグラデーションを補間生成 */
+function getSkyGradientByPhase(condition: SkyCondition, skyPhase: number): string {
+  const palettes = deriveConditionPalettes(condition);
+  const clamped = Math.max(0, Math.min(1, skyPhase));
+
+  // 補間区間を特定
+  let lower = palettes[0];
+  let upper = palettes[palettes.length - 1];
+  for (let i = 0; i < palettes.length - 1; i++) {
+    if (clamped >= palettes[i].phase && clamped <= palettes[i + 1].phase) {
+      lower = palettes[i];
+      upper = palettes[i + 1];
+      break;
     }
   }
 
-  switch (condition) {
-    case "clear":
-      return "linear-gradient(180deg, #1a6dd4 0%, #3a8ee8 25%, #6ab4f7 55%, #a8d8ff 80%, #d4edff 100%)";
-    case "cloudy":
-      return "linear-gradient(180deg, #4a7ab5 0%, #6a95c8 30%, #8cb0d8 60%, #b8cfe5 100%)";
-    case "overcast":
-      return "linear-gradient(180deg, #5a6578 0%, #727e90 30%, #8a95a5 60%, #a0aab5 100%)";
-    case "rain":
-      return "linear-gradient(180deg, #3a4555 0%, #4d5868 30%, #5a6575 60%, #6e7888 100%)";
-    case "snow":
-      return "linear-gradient(180deg, #7888a0 0%, #8fa0b8 30%, #a5b5c8 60%, #c0cdd8 100%)";
-    case "thunder":
-      return "linear-gradient(180deg, #2a3040 0%, #3d4555 30%, #4a5265 60%, #555e70 100%)";
-    case "fog":
-      return "linear-gradient(180deg, #6a7585 0%, #808a98 30%, #95a0ab 60%, #b0b8c2 100%)";
-    default:
-      return "linear-gradient(180deg, #1a6dd4 0%, #3a8ee8 30%, #a8d8ff 100%)";
-  }
+  const range = upper.phase - lower.phase;
+  const t = range > 0 ? (clamped - lower.phase) / range : 0;
+
+  const c0 = lerpColor(lower.colors[0], upper.colors[0], t);
+  const c1 = lerpColor(lower.colors[1], upper.colors[1], t);
+  const c2 = lerpColor(lower.colors[2], upper.colors[2], t);
+  const c3 = lerpColor(lower.colors[3], upper.colors[3], t);
+
+  return `linear-gradient(180deg, ${c0} 0%, ${c1} 30%, ${c2} 65%, ${c3} 100%)`;
 }
 
-/**
- * 天気に応じたエフェクトの強度
- * 可読性を保つため opacity は抑えめ。主張しすぎない演出を意識
- */
-function getOverlayConfig(condition: SkyCondition, daytime: boolean, precipitation: number) {
-  // 降水量が0なら雨エフェクトを表示しない
+// ============================================================
+// エフェクト設定
+// ============================================================
+
+function getOverlayConfig(condition: SkyCondition, skyPhase: number, precipitation: number) {
   const hasRain = precipitation > 0;
+  // 星: フェーズ0.25以下で表示、フェードアウト
+  const starsBase = (condition === "clear" || condition === "cloudy") ? 0.6 : 0;
+  const starsOpacity = skyPhase < 0.25
+    ? starsBase * (1 - skyPhase / 0.25)
+    : 0;
+
   return {
     rainOpacity: hasRain ? (condition === "rain" ? 0.35 : condition === "thunder" ? 0.45 : 0) : 0,
     snowOpacity: condition === "snow" ? 0.4 : 0,
     fogOpacity: condition === "fog" ? 0.35 : 0,
-    starsOpacity: !daytime && (condition === "clear" || condition === "cloudy") ? 0.6 : 0,
+    starsOpacity,
   };
 }
 
-/**
- * 降水量に応じた雨アニメーション速度を返す
- * 降水量が多いほど duration を短く（＝速く）する
- *
- * 閾値:
- *  - 0〜2mm:   通常（0.25s / 0.35s）
- *  - 2〜5mm:   やや速い（0.15s / 0.22s）
- *  - 5mm超:    激しい（0.08s / 0.12s）
- */
 function getRainSpeed(precipitation: number | undefined): { layer1: string; layer2: string } {
   const p = precipitation ?? 0;
   if (p > 5) return { layer1: "0.12s", layer2: "0.17s" };
@@ -117,57 +177,150 @@ function getRainSpeed(precipitation: number | undefined): { layer1: string; laye
   return { layer1: "0.5s", layer2: "0.7s" };
 }
 
-export function SkyBackground({ weatherCode, hoveredPoint, precipitation }: SkyBackgroundProps) {
-  // ホバー中のポイントがあればその天気と時刻を使う。なければ現在天気
+/** 天気条件による太陽の減衰率 */
+const SUN_DAMPING: Record<SkyCondition, number> = {
+  clear: 1.0,
+  cloudy: 0.6,
+  overcast: 0.15,
+  rain: 0.08,
+  snow: 0.12,
+  thunder: 0.05,
+  fog: 0.08,
+};
+
+// ============================================================
+// コンポーネント
+// ============================================================
+
+export function SkyBackground({ weatherCode, hoveredPoint, precipitation, latitude }: SkyBackgroundProps) {
   const effectiveCode = hoveredPoint?.weatherCode ?? weatherCode;
   const effectiveHour = hoveredPoint?.hour;
 
-  const daytime = isDaytime(effectiveHour);
   const condition = useMemo(
     () => weatherCodeToSkyCondition(effectiveCode),
     [effectiveCode]
   );
+
+  // 太陽位置の計算
+  const solar = useMemo(() => {
+    const now = new Date();
+    const dayOfYear = getDayOfYear(now);
+    const hourFloat = effectiveHour ?? (now.getHours() + now.getMinutes() / 60);
+
+    const altitude = calcSolarAltitude(latitude, dayOfYear, hourFloat);
+    const skyPhase = altitudeToSkyPhase(altitude);
+    const sunX = calcSunHorizontalPosition(hourFloat) * 100;
+    const sunY = calcSunVerticalPosition(altitude);
+
+    return { altitude, skyPhase, sunX, sunY, hourFloat };
+  }, [latitude, effectiveHour]);
+
+  // グラデーション
   const gradient = useMemo(
-    () => getSkyGradient(condition, daytime),
-    [condition, daytime]
+    () => getSkyGradientByPhase(condition, solar.skyPhase),
+    [condition, solar.skyPhase]
   );
-  // ホバー中はホバー先の降水量、それ以外は現在の降水量で速度を決定
+
+  // エフェクト
   const effectivePrecipitation = hoveredPoint?.precipitation ?? precipitation;
   const overlay = useMemo(
-    () => getOverlayConfig(condition, daytime, effectivePrecipitation ?? 0),
-    [condition, daytime, effectivePrecipitation]
+    () => getOverlayConfig(condition, solar.skyPhase, effectivePrecipitation ?? 0),
+    [condition, solar.skyPhase, effectivePrecipitation]
   );
   const rainSpeed = useMemo(
     () => getRainSpeed(effectivePrecipitation),
     [effectivePrecipitation]
   );
 
-  // ホバー中は高速切替（300ms）、非ホバーはゆるやか（2000ms）
+  // 太陽の見た目
+  const sunVisuals = useMemo(() => {
+    const alt = solar.altitude;
+    const damping = SUN_DAMPING[condition] ?? 1;
+
+    // 全体の透明度（地平線下-4°から出現）
+    let baseOpacity: number;
+    if (alt > 8) baseOpacity = 0.85;
+    else if (alt > 0) baseOpacity = 0.4 + (alt / 8) * 0.45;
+    else if (alt > -4) baseOpacity = ((alt + 4) / 4) * 0.4;
+    else baseOpacity = 0;
+
+    const opacity = baseOpacity * damping;
+
+    // 色温度（地平線付近は暖色、高い位置は白寄り）
+    const warmth = alt < 10 ? 1 : alt < 25 ? 1 - (alt - 10) / 15 : 0;
+    // 暖色: 255,160,60 → 白寄り: 255,240,200
+    const coreR = 255;
+    const coreG = Math.round(160 + (240 - 160) * (1 - warmth));
+    const coreB = Math.round(60 + (200 - 60) * (1 - warmth));
+
+    // グロー強度（ゴールデンアワー時に最大）
+    const glowIntensity = alt > 0 && alt < 15 ? 0.25 : alt >= 15 ? 0.12 : alt > -4 ? 0.15 : 0;
+
+    return { opacity, coreR, coreG, coreB, glowIntensity: glowIntensity * damping, warmth };
+  }, [solar.altitude, condition]);
+
+  // 大気散乱（太陽位置に追従）
+  const scatterGradient = useMemo(() => {
+    if (solar.skyPhase < 0.1) {
+      // 深夜: 微かな青い光
+      return "radial-gradient(ellipse at 30% 30%, rgba(100,120,255,0.06) 0%, transparent 60%)";
+    }
+    // 太陽位置に追従する暖色の散乱
+    const warmAlpha = solar.skyPhase < 0.5
+      ? 0.06 + sunVisuals.warmth * 0.12  // 朝焼け/夕焼け時は強い
+      : 0.08;                              // 日中は控えめ
+    return `radial-gradient(ellipse at ${solar.sunX}% ${100 - solar.sunY}%, rgba(255,200,100,${warmAlpha}) 0%, transparent 55%)`;
+  }, [solar.skyPhase, solar.sunX, solar.sunY, sunVisuals.warmth]);
+
   const transitionDuration = hoveredPoint ? "300ms" : "2000ms";
 
   return (
     <div className="fixed inset-0 -z-10 overflow-hidden" aria-hidden="true">
       {/* メイン空グラデーション */}
       <div
-        className="absolute inset-0 ease-in-out"
+        className="absolute inset-0"
         style={{
           background: gradient,
           transition: `background ${transitionDuration} ease-in-out`,
         }}
       />
 
-      {/* 大気の散乱 */}
+      {/* 大気の散乱（太陽位置追従） */}
       <div
         className="absolute inset-0"
         style={{
-          background: daytime
-            ? "radial-gradient(ellipse at 70% 20%, rgba(255,200,100,0.1) 0%, transparent 60%)"
-            : "radial-gradient(ellipse at 30% 30%, rgba(100,120,255,0.06) 0%, transparent 60%)",
-          transition: `opacity ${transitionDuration}`,
+          background: scatterGradient,
+          transition: `background ${transitionDuration} ease-in-out`,
         }}
       />
 
-      {/* 星 */}
+      {/* 太陽 */}
+      <div
+        className="absolute pointer-events-none"
+        style={{
+          width: "70px",
+          height: "70px",
+          borderRadius: "50%",
+          left: `${solar.sunX}%`,
+          bottom: `${solar.sunY}%`,
+          transform: "translate(-50%, 50%)",
+          background: `radial-gradient(circle,
+            rgba(${sunVisuals.coreR}, ${sunVisuals.coreG}, ${sunVisuals.coreB}, ${sunVisuals.opacity}) 0%,
+            rgba(${sunVisuals.coreR}, ${sunVisuals.coreG}, ${Math.max(0, sunVisuals.coreB - 40)}, ${sunVisuals.opacity * 0.5}) 35%,
+            rgba(255, 180, 80, ${sunVisuals.opacity * 0.2}) 65%,
+            transparent 100%)`,
+          boxShadow: sunVisuals.glowIntensity > 0
+            ? `0 0 40px 15px rgba(255, 200, 100, ${sunVisuals.glowIntensity}),
+               0 0 80px 30px rgba(255, 180, 80, ${sunVisuals.glowIntensity * 0.4})`
+            : "none",
+          transition: `left ${transitionDuration} ease-in-out,
+                       bottom ${transitionDuration} ease-in-out,
+                       background ${transitionDuration} ease-in-out,
+                       box-shadow ${transitionDuration} ease-in-out`,
+        }}
+      />
+
+      {/* 星（スカイフェーズで滑らかにフェードアウト） */}
       <div
         className="absolute inset-0 sky-stars"
         style={{
@@ -176,7 +329,7 @@ export function SkyBackground({ weatherCode, hoveredPoint, precipitation }: SkyB
         }}
       />
 
-      {/* 雨 — 2層重ねで奥行き感を演出。降水量に応じて速度が変化 */}
+      {/* 雨 — 2層重ねで奥行き感を演出 */}
       <div
         className="absolute inset-0 sky-rain-layer-1"
         style={{
