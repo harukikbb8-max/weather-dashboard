@@ -85,8 +85,8 @@ function buildRequestUrl(
     longitude: city.longitude.toString(),
     timezone: city.timezone,
     forecast_days: VIEW_MODE_CONFIG[viewMode].forecastDays.toString(),
-    // ユーザー選択の指標 + weather_code（空背景ホバー連動用）+ precipitation（雨速度連動用）を常に取得
-    hourly: [...new Set([...metrics, "weather_code", "precipitation"])].join(","),
+    // ユーザー選択の指標 + 空背景連動用（weather_code, precipitation, cloud_cover）を常に取得
+    hourly: [...new Set([...metrics, "weather_code", "precipitation", "cloud_cover"])].join(","),
     // current パラメータで現在天気も取得（追加リクエスト不要）
     current: [
       "temperature_2m",

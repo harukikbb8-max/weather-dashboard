@@ -203,6 +203,8 @@ export interface HoveredPointInfo {
   hour: number;
   /** ホバー中のデータポイントの降水量（mm）。雨速度制御に使用 */
   precipitation?: number;
+  /** ホバー中のデータポイントの雲量（%）。背景の天気条件判定に使用 */
+  cloudCover?: number;
 }
 
 /** useWeatherData フックの返却値 */

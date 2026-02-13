@@ -82,6 +82,7 @@ function CustomTooltip({
   const weatherCode = point?.weather_code;
   const hour = point?.hour;
   const precipitation = point?.precipitation as number | undefined;
+  const cloudCover = point?.cloud_cover as number | undefined;
 
   // ホバー中のデータポイントの天気情報を親へ通知
   const onHoverRef = useRef(onHover);
@@ -89,11 +90,11 @@ function CustomTooltip({
 
   useEffect(() => {
     if (weatherCode != null && hour != null) {
-      onHoverRef.current?.({ weatherCode, hour, precipitation });
+      onHoverRef.current?.({ weatherCode, hour, precipitation, cloudCover });
     } else {
       onHoverRef.current?.(null);
     }
-  }, [weatherCode, hour, precipitation]);
+  }, [weatherCode, hour, precipitation, cloudCover]);
 
   if (!active || !payload?.length) return null;
 

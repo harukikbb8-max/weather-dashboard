@@ -32,6 +32,8 @@ interface SkyBackgroundProps {
   weatherCode: number | undefined;
   hoveredPoint: HoveredPointInfo | null;
   precipitation?: number;
+  /** 現在の雲量（%） */
+  cloudCover?: number;
   /** 都市の緯度。太陽位置計算に使用 */
   latitude: number;
 }
@@ -178,18 +180,34 @@ function getRainSpeed(precipitation: number | undefined): { layer1: string; laye
 }
 
 
+/**
+ * 雲量（%）で天気条件を補正する
+ * 天気コードが晴れ系でも雲量が高ければ曇り/どんよりに上書き
+ */
+function adjustConditionByCloudCover(condition: SkyCondition, cloudCover: number): SkyCondition {
+  // 雨・雪・雷・霧はそのまま（雲量より優先）
+  if (condition === "rain" || condition === "snow" || condition === "thunder" || condition === "fog") {
+    return condition;
+  }
+  if (cloudCover >= 80) return "overcast";
+  if (cloudCover >= 50) return "cloudy";
+  if (cloudCover >= 20) return "cloudy";
+  return "clear";
+}
+
 // ============================================================
 // コンポーネント
 // ============================================================
 
-export function SkyBackground({ weatherCode, hoveredPoint, precipitation, latitude }: SkyBackgroundProps) {
+export function SkyBackground({ weatherCode, hoveredPoint, precipitation, cloudCover, latitude }: SkyBackgroundProps) {
   const effectiveCode = hoveredPoint?.weatherCode ?? weatherCode;
   const effectiveHour = hoveredPoint?.hour;
+  const effectiveCloudCover = hoveredPoint?.cloudCover ?? cloudCover ?? 0;
 
-  const condition = useMemo(
-    () => weatherCodeToSkyCondition(effectiveCode),
-    [effectiveCode]
-  );
+  const condition = useMemo(() => {
+    const base = weatherCodeToSkyCondition(effectiveCode);
+    return adjustConditionByCloudCover(base, effectiveCloudCover);
+  }, [effectiveCode, effectiveCloudCover]);
 
   // 太陽位置の計算
   const solar = useMemo(() => {
