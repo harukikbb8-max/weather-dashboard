@@ -108,9 +108,9 @@ function getOverlayConfig(condition: SkyCondition, daytime: boolean) {
  */
 function getRainSpeed(precipitation: number | undefined): { layer1: string; layer2: string } {
   const p = precipitation ?? 0;
-  if (p > 5) return { layer1: "0.04s", layer2: "0.06s" };
-  if (p > 2) return { layer1: "0.10s", layer2: "0.14s" };
-  return { layer1: "0.25s", layer2: "0.35s" };
+  if (p > 5) return { layer1: "0.02s", layer2: "0.03s" };
+  if (p > 2) return { layer1: "0.05s", layer2: "0.07s" };
+  return { layer1: "0.125s", layer2: "0.175s" };
 }
 
 export function SkyBackground({ weatherCode, hoveredPoint, precipitation }: SkyBackgroundProps) {
