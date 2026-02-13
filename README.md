@@ -39,7 +39,8 @@
 |------|------|
 | **動的空背景** | 現在の天気コード（WMO）と時間帯（昼/夜）に応じて背景グラデーションが変化 |
 | **チャートホバー連動** | チャート上のデータポイントにマウスを乗せると、その時点の天気・時刻で空背景がリアルタイムに変化。夜の時間帯（18:00〜6:00）では背景が暗転し星が瞬き、雨の時間帯では雨が降り始める |
-| **天気エフェクト** | 雨（3層の斜線アニメーション）、雪（2層の降雪アニメーション）、星（明滅アニメーション）を CSS-only で実装 |
+| **天気エフェクト** | 雨（2層のアニメーション）、雪（2層の降雪アニメーション）、星（明滅アニメーション）を CSS-only で実装 |
+| **降水量連動の雨速度** | 降水量に応じて雨アニメーションの速度が3段階に変化（0〜2mm: しとしと / 2〜5mm: 強い雨 / 5mm超: 激しい雨）。チャートホバー時はその時点の降水量で速度が連動 |
 | **天気インジケーター** | ヘッダー下に現在の天気・昼夜・ホバー中の時刻をバッジで表示。天気に応じたアイコンカラー変化 |
 | **ツールチップ天気表示** | チャートホバー時のツールチップに、その時点の天気（晴れ/雨/曇り等）と昼/夜を表示 |
 | **パスワード認証** | Next.js Middleware によるサイト全体のパスワード保護。Liquid Glass デザインのログインページ |
@@ -125,7 +126,7 @@ src/
 | `ViewMode` / `VIEW_MODE_CONFIG` | `"48h"` / `"7d"` と API の `forecast_days` のマッピング | UI の値と API パラメータの変換ロジックを型で表現 |
 | `OpenMeteoHourlyResponse` | API レスポンスの型 | YAGNI 原則でアプリが使うフィールドのみ定義 |
 | `ChartDataPoint` | チャート1点のデータ。`time`, `timestamp`, `hour`, `weather_code` + 動的指標値 | Recharts が期待する行指向フォーマット。`hour` と `weather_code` はホバー連動用 |
-| `HoveredPointInfo` | チャートホバー時に SkyBackground に渡す `{ weatherCode, hour }` | コンポーネント間の契約を型で明示 |
+| `HoveredPointInfo` | チャートホバー時に SkyBackground に渡す `{ weatherCode, hour, precipitation? }` | コンポーネント間の契約を型で明示。降水量で雨速度を連動 |
 | `WEATHER_CODE_MAP` | WMO天気コード → 日本語ラベル + アイコン名 | 20種類の天気コードを網羅 |
 | `weatherCodeToSkyCondition()` | 天気コード → 7分類（clear/cloudy/overcast/rain/snow/thunder/fog） | 空背景の決定ロジックを型定義層に置くことで、コンポーネントから切り離す |
 
@@ -135,7 +136,7 @@ src/
 |-----------|------|----------|
 | `cache` (Map) | 同一パラメータでの重複リクエスト防止 | TTL 5分。SWR/React Query は依存追加の割にこの規模では過剰と判断 |
 | `buildCacheKey()` | パラメータからキャッシュキーを生成 | metrics をソートして順序違いで別キーになるのを防止 |
-| `buildRequestUrl()` | Open-Meteo API の URL を組み立て | `hourly` パラメータにユーザー選択指標 + `weather_code` を常に含める（ホバー連動用） |
+| `buildRequestUrl()` | Open-Meteo API の URL を組み立て | `hourly` パラメータにユーザー選択指標 + `weather_code` + `precipitation` を常に含める（ホバー連動・雨速度連動用） |
 | `fetchWeatherData()` | 公開 API。キャッシュ → fetch → キャッシュ保存 | 指標未選択時は API コールせず空データを返す（無駄なリクエスト排除） |
 
 **単位変換を API 側に委譲している理由:**
@@ -148,7 +149,7 @@ Open-Meteo は `temperature_unit=fahrenheit`, `wind_speed_unit=mph` パラメー
 | `metricsKey` | `JSON.stringify([...metrics].sort())` で配列の参照安定化 | 配列の中身が同じなら `useEffect` を再実行しない |
 | `AbortController` | パラメータ変更時に前のリクエストをキャンセル | ステール（古い）レスポンスが state に反映されるのを防止 |
 | `isCancelled` フラグ | キャンセル後の state 更新を防止 | メモリリーク防止 |
-| `transformToChartData()` | API レスポンスを Recharts の行指向形式に変換 | 各ポイントに `hour` と `weather_code` を付与し、ホバー連動を可能にする |
+| `transformToChartData()` | API レスポンスを Recharts の行指向形式に変換 | 各ポイントに `hour`・`weather_code`・`precipitation` を付与し、ホバー連動・雨速度連動を可能にする |
 
 ### `src/hooks/useLocalStorage.ts` — localStorage 永続化フック
 
@@ -175,9 +176,9 @@ const [cityId, setCityId] = useLocalStorage<CityId>("wd-city", "tokyo");
 | `MetricSelector` | `MetricSelector.tsx` | 指標の複数選択 | 色付きドットがチャートの線色と一致し視覚的一貫性を確保。最低1つの選択を維持するバリデーション |
 | `PeriodSelector` | `PeriodSelector.tsx` | 48h/7d 切替 | セグメントコントロール + スライドアニメーション。内部的には `role="radiogroup"` |
 | `UnitToggle` | `UnitToggle.tsx` | °C↔°F, km/h↔mph | `role="switch"` で実装しアクセシビリティを確保 |
-| `WeatherChart` | `WeatherChart.tsx` | 折れ線グラフ描画 | カスタム Tooltip 内の `useEffect` でホバー中のデータポイントの `weather_code` + `hour` を親に通知。ツールチップに天気・昼夜情報も表示 |
+| `WeatherChart` | `WeatherChart.tsx` | 折れ線グラフ描画 | カスタム Tooltip 内の `useEffect` でホバー中のデータポイントの `weather_code` + `hour` + `precipitation` を親に通知。ツールチップに天気・昼夜情報も表示 |
 | `CurrentWeather` | `CurrentWeather.tsx` | 現在天気カード | WMO天気コード → アイコン + 日本語ラベルに変換 |
-| `SkyBackground` | `SkyBackground.tsx` | 動的空背景 | 天気7種 x 昼夜2 = 14パターンのグラデーション。ホバー中は300ms、非ホバー時は2000msのトランジション |
+| `SkyBackground` | `SkyBackground.tsx` | 動的空背景 | 天気7種 x 昼夜2 = 14パターンのグラデーション。ホバー中は300ms、非ホバー時は2000msのトランジション。降水量に応じた雨速度の3段階制御 |
 | `SkyIndicator` | `SkyIndicator.tsx` | 天気状態バッジ | 天気アイコン + ラベル + 昼/夜 + ホバー中の時刻を表示。晴れの夜は月アイコンに自動切替 |
 | `LoadingSkeleton` | `LoadingSkeleton.tsx` | スケルトンUI | スピナーではなく最終レイアウトの形を予告し、知覚的な待ち時間を短縮 |
 | `ErrorDisplay` | `ErrorDisplay.tsx` | エラー表示 | リトライボタンで再取得を促す |
@@ -205,7 +206,7 @@ page.tsx が管理する4つの状態:
 |------------|------|
 | `.glass-card` | `backdrop-filter: blur(14px)` + 半透明背景 + 微細なボーダー + 上辺ハイライト。macOS Liquid Glass を再現 |
 | `.sky-stars` | radial-gradient で星を散布し、`twinkle` アニメーションで明滅 |
-| `.sky-rain-layer-{1,2,3}` | 3層の斜線アニメーション。手前は太く速く、奥は細く遅い |
+| `.sky-rain-layer-{1,2}` | 2層の雨アニメーション。手前は太く速く、奥は細く遅い。`animation-duration` は SkyBackground からインラインで降水量に応じて動的に制御 |
 | `.sky-snow-layer-{1,2}` | 大粒（ゆっくり大きく揺れ）+ 小粒（速く細かく揺れ）の2層構成 |
 | `select option` | `<option>` はOS ネイティブ描画のため、ダーク背景を明示的に指定 |
 
@@ -227,9 +228,9 @@ macOS/iOS の Liquid Glass UI に着想を得た、ガラスモーフィズム�
 | 快晴 | 青空グラデーション | 紺〜深紫 | 夜間のみ星の明滅 |
 | 一部曇り | やや霞んだ青 | 暗めの紺灰 | 夜間のみ星（弱） |
 | 曇り | グレー系 | 暗いグレー | なし |
-| 雨 | 暗い青灰 | 漆黒に近い | 3層の雨 |
+| 雨 | 暗い青灰 | 漆黒に近い | 2層の雨（降水量で速度変化） |
 | 雪 | 明るいグレー | 紺灰 | 2層の降雪 |
-| 雷雨 | 暗紫 | 漆黒 | 3層の強雨 |
+| 雷雨 | 暗紫 | 漆黒 | 2層の強雨（降水量で速度変化） |
 | 霧 | 霞んだグレー | 暗グレー | 霧オーバーレイ |
 
 ---
@@ -270,4 +271,5 @@ API キーは不要です（Open-Meteo は非商用無償利用可能）。
 | 天気エフェクトを CSS-only で実装 | Canvas/JS アニメーション不使用。GPU 合成レイヤーで 60fps を維持しつつバンドルサイズ増加なし |
 | hourly エンドポイントで統一 | daily は指標名が異なる（`temperature_2m_max` 等）ため、指標定義の二重管理を回避 |
 | Tooltip 経由でホバー情報を通知 | Recharts v3 の `onMouseMove` は payload 構造がバージョンで異なる。Tooltip の `payload` は描画と同じデータを保証するため最も信頼性が高い |
+| 降水量で雨アニメーション速度を制御 | 降水量を3段階（0〜2mm / 2〜5mm / 5mm超）で判定し `animation-duration` をインラインで動的に設定。チャートホバー時はその時点の降水量で連動 |
 | Next.js Middleware で認証 | Edge Runtime で全ルートをインターセプト。httpOnly クッキーで認証状態を管理し、XSS によるトークン窃取を防止 |
