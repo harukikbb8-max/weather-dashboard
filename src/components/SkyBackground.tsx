@@ -26,6 +26,8 @@ interface SkyBackgroundProps {
   weatherCode: number | undefined;
   /** チャートホバー中のデータポイント情報。null ならデフォルト（現在時刻） */
   hoveredPoint: HoveredPointInfo | null;
+  /** 現在の降水量（mm）。雨アニメーションの速度制御に使用 */
+  precipitation?: number;
 }
 
 /**
@@ -95,7 +97,23 @@ function getOverlayConfig(condition: SkyCondition, daytime: boolean) {
   };
 }
 
-export function SkyBackground({ weatherCode, hoveredPoint }: SkyBackgroundProps) {
+/**
+ * 降水量に応じた雨アニメーション速度を返す
+ * 降水量が多いほど duration を短く（＝速く）する
+ *
+ * 閾値:
+ *  - 0〜2mm:   通常（0.25s / 0.35s）
+ *  - 2〜5mm:   やや速い（0.15s / 0.22s）
+ *  - 5mm超:    激しい（0.08s / 0.12s）
+ */
+function getRainSpeed(precipitation: number | undefined): { layer1: string; layer2: string } {
+  const p = precipitation ?? 0;
+  if (p > 5) return { layer1: "0.04s", layer2: "0.06s" };
+  if (p > 2) return { layer1: "0.10s", layer2: "0.14s" };
+  return { layer1: "0.25s", layer2: "0.35s" };
+}
+
+export function SkyBackground({ weatherCode, hoveredPoint, precipitation }: SkyBackgroundProps) {
   // ホバー中のポイントがあればその天気と時刻を使う。なければ現在天気
   const effectiveCode = hoveredPoint?.weatherCode ?? weatherCode;
   const effectiveHour = hoveredPoint?.hour;
@@ -112,6 +130,10 @@ export function SkyBackground({ weatherCode, hoveredPoint }: SkyBackgroundProps)
   const overlay = useMemo(
     () => getOverlayConfig(condition, daytime),
     [condition, daytime]
+  );
+  const rainSpeed = useMemo(
+    () => getRainSpeed(precipitation),
+    [precipitation]
   );
 
   // ホバー中は高速切替（300ms）、非ホバーはゆるやか（2000ms）
@@ -148,11 +170,12 @@ export function SkyBackground({ weatherCode, hoveredPoint }: SkyBackgroundProps)
         }}
       />
 
-      {/* 雨 — 3層重ねで奥行き感を演出 */}
+      {/* 雨 — 2層重ねで奥行き感を演出。降水量に応じて速度が変化 */}
       <div
         className="absolute inset-0 sky-rain-layer-1"
         style={{
           opacity: overlay.rainOpacity,
+          animationDuration: rainSpeed.layer1,
           transition: `opacity ${transitionDuration}`,
         }}
       />
@@ -160,6 +183,7 @@ export function SkyBackground({ weatherCode, hoveredPoint }: SkyBackgroundProps)
         className="absolute inset-0 sky-rain-layer-2"
         style={{
           opacity: overlay.rainOpacity * 0.6,
+          animationDuration: rainSpeed.layer2,
           transition: `opacity ${transitionDuration}`,
         }}
       />

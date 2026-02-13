@@ -122,7 +122,7 @@ export default function Home() {
   return (
     <>
       {/* 天気連動の動的空背景（全画面 fixed） */}
-      <SkyBackground weatherCode={currentWeather?.weather_code} hoveredPoint={hoveredPoint} />
+      <SkyBackground weatherCode={currentWeather?.weather_code} hoveredPoint={hoveredPoint} precipitation={currentWeather?.precipitation} />
 
       <main className="relative min-h-screen px-4 py-6 sm:px-6 lg:px-8 max-w-7xl mx-auto">
         {/* ヘッダー */}
