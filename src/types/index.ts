@@ -201,6 +201,8 @@ export interface ChartDataPoint {
 export interface HoveredPointInfo {
   weatherCode: number;
   hour: number;
+  /** ホバー中のデータポイントの降水量（mm）。雨速度制御に使用 */
+  precipitation?: number;
 }
 
 /** useWeatherData フックの返却値 */

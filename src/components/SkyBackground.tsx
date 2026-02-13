@@ -131,9 +131,11 @@ export function SkyBackground({ weatherCode, hoveredPoint, precipitation }: SkyB
     () => getOverlayConfig(condition, daytime),
     [condition, daytime]
   );
+  // ホバー中はホバー先の降水量、それ以外は現在の降水量で速度を決定
+  const effectivePrecipitation = hoveredPoint?.precipitation ?? precipitation;
   const rainSpeed = useMemo(
-    () => getRainSpeed(precipitation),
-    [precipitation]
+    () => getRainSpeed(effectivePrecipitation),
+    [effectivePrecipitation]
   );
 
   // ホバー中は高速切替（300ms）、非ホバーはゆるやか（2000ms）
