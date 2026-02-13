@@ -68,9 +68,9 @@ export function calcSunHorizontalPosition(hourFloat: number): number {
 
 /**
  * 太陽高度 → 垂直位置（CSS bottom %）
- * 地平線（高度0°）= 10%、最高点（高度70°）= 75%
+ * 地平線（高度0°）= 10%、最高点（高度70°）= 90%
  */
 export function calcSunVerticalPosition(altitude: number): number {
   if (altitude <= 0) return 10;
-  return 10 + (Math.min(altitude, 70) / 70) * 65;
+  return 10 + (Math.min(altitude, 70) / 70) * 80;
 }
