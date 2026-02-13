@@ -188,8 +188,8 @@ function getSkyGradientByPhase(condition: SkyCondition, skyPhase: number): strin
 
 function getOverlayConfig(condition: SkyCondition, skyPhase: number, precipitation: number) {
   const hasRain = precipitation > 0;
-  // 星: フェーズ0.25以下で表示、フェードアウト
-  const starsBase = (condition === "clear" || condition === "cloudy") ? 0.6 : 0;
+  // 星: 快晴のみ。曇り以上は雲で星が隠れる
+  const starsBase = condition === "clear" ? 0.6 : 0;
   const starsOpacity = skyPhase < 0.25
     ? starsBase * (1 - skyPhase / 0.25)
     : 0;

@@ -122,7 +122,7 @@ export const METRICS: readonly MetricDefinition[] = [
     unitGroup: "percentage",
     unitMetric: "%",
     unitImperial: "%",
-    color: "#6b7280",  // gray-500: 雲のグレー
+    color: "#f59e0b",  // amber-500: 灰色背景でも視認性の高い暖色
     icon: "Cloud",
   },
 ] as const;
