@@ -66,25 +66,25 @@ const CONDITION_PALETTES: Record<SkyCondition, PaletteEntry[]> = {
     { phase: 0.55, colors: ["#2060c0", "#4088e0", "#70a8f0", "#a0c8ff"] },
     { phase: 1.00, colors: ["#1a6dd4", "#3a8ee8", "#6ab4f7", "#d4edff"] },
   ],
-  /* ── 曇り(50-80%): 重い灰色の夜空 ── */
+  /* ── 曇り(50-80%): 重い灰色 ── */
   cloudy: [
-    { phase: 0.00, colors: ["#606870", "#707880", "#6a7078", "#606870"] },
-    { phase: 0.15, colors: ["#6a7280", "#7a828a", "#758088", "#707880"] },
-    { phase: 0.25, colors: ["#757d88", "#858d95", "#808890", "#7a8288"] },
-    { phase: 0.33, colors: ["#808890", "#909898", "#8a8078", "#b09070"] },
-    { phase: 0.42, colors: ["#6a80a0", "#80a0b8", "#a89880", "#c8a070"] },
+    { phase: 0.00, colors: ["#787e88", "#8a9098", "#858b92", "#808890"] },
+    { phase: 0.15, colors: ["#828a92", "#949ca5", "#8e969e", "#8a9098"] },
+    { phase: 0.25, colors: ["#8a929a", "#9aa2aa", "#959da5", "#909aa2"] },
+    { phase: 0.33, colors: ["#909aa2", "#a0a8a8", "#9a9088", "#c0a080"] },
+    { phase: 0.42, colors: ["#7898b8", "#90b0c8", "#b0a890", "#d0b080"] },
     { phase: 0.55, colors: ["#5888c0", "#78a8d8", "#98c0e0", "#c0d8f0"] },
     { phase: 1.00, colors: ["#5888c0", "#78a8d8", "#98c0e0", "#c0d8f0"] },
   ],
-  /* ── どんより(80%+): 鉛色。分厚い雲がべったり覆う ── */
+  /* ── どんより(80%+): 鉛色。分厚い雲がべったり ── */
   overcast: [
-    { phase: 0.00, colors: ["#808890", "#909898", "#8a9095", "#808890"] },
-    { phase: 0.15, colors: ["#889098", "#98a0a8", "#929aa0", "#8a9298"] },
-    { phase: 0.25, colors: ["#9098a0", "#a0a8b0", "#9aa2a8", "#949ca5"] },
-    { phase: 0.33, colors: ["#98a0a8", "#a8b0b8", "#a5adb5", "#a0a8b0"] },
-    { phase: 0.42, colors: ["#a0a8b0", "#b0b8c0", "#a8b2ba", "#a5adb5"] },
-    { phase: 0.55, colors: ["#a0aab8", "#b0bac5", "#b8c2cc", "#c8d0d8"] },
-    { phase: 1.00, colors: ["#a0aab8", "#b0bac5", "#b8c2cc", "#c8d0d8"] },
+    { phase: 0.00, colors: ["#98a0a8", "#a8b0b8", "#a2aab0", "#9aa2aa"] },
+    { phase: 0.15, colors: ["#a0a8b0", "#b0b8c0", "#aab2b8", "#a2aab2"] },
+    { phase: 0.25, colors: ["#a5adb5", "#b5bdc5", "#b0b8c0", "#a8b0b8"] },
+    { phase: 0.33, colors: ["#a8b2ba", "#b8c0c8", "#b5bdc5", "#b0b8c0"] },
+    { phase: 0.42, colors: ["#b0b8c0", "#c0c8d0", "#b8c2c8", "#b2bac2"] },
+    { phase: 0.55, colors: ["#b0bac5", "#c0c8d2", "#c5cdd5", "#d0d8e0"] },
+    { phase: 1.00, colors: ["#b0bac5", "#c0c8d2", "#c5cdd5", "#d0d8e0"] },
   ],
   /* ── 雨: 暗く青緑がかった重い夜空 ── */
   rain: [
